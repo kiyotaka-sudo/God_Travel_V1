@@ -1,0 +1,45 @@
+# Données locales de MariaDB/XAMPP et export de sauvegarde
+/.mariadb-dev-data/
+*.sql.bak
+*.dump
+
+# Secrets et configurations locales
+.env
+.env.*
+!.env.example
+**/application.properties
+**/application-local.properties
+**/secrets.*
+
+# Fichiers générés / dépendances
+**/node_modules/
+**/dist/
+**/target/
+**/.npm-cache/
+**/uploads/
+**/*.log
+
+# Outils Windows et runtimes embarqués non nécessaires au dépôt
+**/*.bat
+**/*.cmd
+**/*.ps1
+/demarrer-base.ps1
+/god-travel-backend/jdk17/
+/god-travel-backend/apache-maven-3.9.6/
+
+# Anciennes versions SQL : seul le master est la source de schéma
+/god_travel_V1.sql
+/god_travel_modele_complet_41_tables.sql
+/god_travel_vues_triggers_procedures.sql
+
+# Supports de travail et assets non utilisés par l'application
+/prompt.md
+/course_keywords.json
+/parse_tables.py
+/asset3D/
+/images/
+
+# Documentation de travail remplacée par le guide racine
+/frontend.md
+/god-travel-frontend/README.md
+/god-travel-backend/README.md
