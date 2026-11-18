@@ -30,8 +30,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && useAuthStore.getState().token && !isAuthRequest) {
       const isClient = useAuthStore.getState().user?.role === 'ROLE_CLIENT'
       useAuthStore.getState().logout()
-      window.location.href = isClient ? '/connexion' : '/login'
+      const returnTo = `${window.location.pathname}${window.location.search}`
+      const target = isClient ? '/connexion' : '/login'
+      window.location.assign(`${target}?returnTo=${encodeURIComponent(returnTo)}`)
     }
+    if (error.response?.status === 403) window.dispatchEvent(new CustomEvent('godtravel:forbidden'))
     return Promise.reject(error)
   }
 )

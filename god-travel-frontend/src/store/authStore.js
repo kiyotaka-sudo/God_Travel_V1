@@ -13,6 +13,7 @@ export const useAuthStore = create(
       agenceId: null,
 
       setAuth: (token, user) => set({ token, user, agenceId: user?.agenceId ?? null }),
+      updateUser: (user) => set((state) => ({ user: { ...state.user, ...user }, agenceId: user?.agenceId ?? state.agenceId })),
       logout: () => set({ token: null, user: null, agenceId: null }),
     }),
     {
