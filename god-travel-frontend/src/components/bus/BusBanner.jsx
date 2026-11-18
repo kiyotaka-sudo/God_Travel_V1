@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Zap, ShieldCheck, Navigation, Radio, Gauge, MapPin } from 'lucide-react'
+import { Zap, Gauge, MapPin } from 'lucide-react'
 
 export default function BusBanner({ compact = false }) {
   const [turbo, setTurbo] = useState(true)
