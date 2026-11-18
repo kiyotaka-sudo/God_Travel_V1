@@ -1,364 +1,70 @@
-import React, { useState } from 'react'
-import { 
-  Package, Plus, Search, Truck, CheckCircle2, QrCode, 
-  MapPin, Scale, User, Phone, ArrowRight, Printer, AlertCircle, FileText
-} from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { ArrowRight, LoaderCircle, Package, PackageCheck, Plus, Search, Truck } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { adminApi, colisApi } from '@api/index'
+import { useAuthStore } from '@store/authStore'
+
+const dataOf = (response) => response?.data?.data
+const amount = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
 
 export default function ColisPage() {
-  const [colisList, setColisList] = useState([
-    {
-      id: 1,
-      codeSuivi: 'GT-COL-7821',
-      expediteur: 'Alain FOTSO',
-      telExp: '+237 699 22 33 44',
-      destinataire: 'Marie KENNE',
-      telDest: '+237 677 11 22 33',
-      agenceDepot: 'Yaoundé Mvan',
-      agenceRetrait: 'Douala Bépanda',
-      nature: 'Carton Matériel Informatique & Écrans',
-      poidsKg: 14.5,
-      valeurXaf: 150000,
-      fraisXaf: 7500,
-      statut: 'EN_TRANSIT',
-      dateEnvoi: '17/11/2026 à 07:05',
-    },
-    {
-      id: 2,
-      codeSuivi: 'GT-COL-7822',
-      expediteur: 'Jean NDONGO',
-      telExp: '+237 655 44 33 22',
-      destinataire: 'Samuel ETO',
-      telDest: '+237 699 88 77 66',
-      agenceDepot: 'Douala Bépanda',
-      agenceRetrait: 'Yaoundé Mvan',
-      nature: 'Plis Confidentiels & Dossiers Juridiques',
-      poidsKg: 1.5,
-      valeurXaf: 25000,
-      fraisXaf: 2500,
-      statut: 'RECU_DESTINATION',
-      dateEnvoi: '17/11/2026 à 09:15',
-    },
-  ])
+  const role = useAuthStore((state) => state.user?.role)
+  const canManage = ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE', 'ROLE_GUICHETIER'].includes(role)
+  const [items, setItems] = useState([])
+  const [agencies, setAgencies] = useState([])
+  const [agencyError, setAgencyError] = useState('')
+  const [query, setQuery] = useState('')
+  const [tracking, setTracking] = useState('')
+  const [tracked, setTracked] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({ nomExpediteur: '', telephoneExpediteur: '', idAgenceRetrait: '', nomDestinataire: '', prenomDestinataire: '', telephoneDestinataire: '', cniDestinataire: '', descriptionContenu: '', poidsKg: '', valeurDeclaree: '', fraisExpedition: '' })
 
-  const [expediteur, setExpediteur] = useState('')
-  const [telExp, setTelExp] = useState('')
-  const [destinataire, setDestinataire] = useState('')
-  const [telDest, setTelDest] = useState('')
-  const [nature, setNature] = useState('')
-  const [poids, setPoids] = useState(5)
-  const [valeur, setValeur] = useState(30000)
-  const [recherche, setRecherche] = useState('')
-  const [colisImprime, setColisImprime] = useState(null)
+  const load = useCallback(async () => {
+    setLoading(true); setError('')
+    try { setItems(dataOf(await colisApi.listerColis()) || []) }
+    catch (e) { setError(e.response?.data?.message || 'Impossible de charger les colis.'); setItems([]) }
+    finally { setLoading(false) }
+  }, [])
+  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (role !== 'ROLE_ADMIN') return
+    adminApi.getAgences().then((response) => setAgencies(dataOf(response) || [])).catch((e) => setAgencyError(e.response?.data?.message || 'La liste des agences n’est pas accessible.'))
+  }, [role])
 
-  // Calcul dynamique : 500 FCFA/kg avec plancher minimum de 2 500 FCFA
-  const fraisCalcules = Math.max(2500, Math.round(poids * 500))
-
-  const handleCreerColis = (e) => {
-    e.preventDefault()
-    if (!expediteur.trim() || !destinataire.trim() || !telDest.trim()) {
-      toast.error('Veuillez renseigner toutes les coordonnées obligatoires.')
-      return
-    }
-
-    const code = 'GT-COL-' + Math.floor(1000 + Math.random() * 9000)
-    const nouveau = {
-      id: Date.now(),
-      codeSuivi: code,
-      expediteur,
-      telExp,
-      destinataire,
-      telDest,
-      agenceDepot: 'Yaoundé Mvan',
-      agenceRetrait: 'Douala Bépanda',
-      nature,
-      poidsKg: parseFloat(poids),
-      valeurXaf: parseInt(valeur) || 0,
-      fraisXaf: fraisCalcules,
-      statut: 'ENREGISTRE',
-      dateEnvoi: new Date().toLocaleString('fr-FR'),
-    }
-
-    setColisList([nouveau, ...colisList])
-    setColisImprime(nouveau)
-    toast.success(`Expédition ${code} enregistrée avec succès !`)
-    
-    // Reset
-    setExpediteur('')
-    setTelExp('')
-    setDestinataire('')
-    setTelDest('')
-    setNature('')
-    setPoids(5)
+  const update = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+  const create = async (event) => {
+    event.preventDefault(); setBusy(true); setError('')
+    try {
+      const request = { ...form, poidsKg: Number(form.poidsKg), valeurDeclaree: form.valeurDeclaree === '' ? null : Number(form.valeurDeclaree), fraisExpedition: Number(form.fraisExpedition) }
+      await colisApi.enregistrerColis(request)
+      toast.success('Colis enregistré. Le code de suivi est disponible dans la liste.')
+      setForm({ nomExpediteur: '', telephoneExpediteur: '', idAgenceRetrait: '', nomDestinataire: '', prenomDestinataire: '', telephoneDestinataire: '', cniDestinataire: '', descriptionContenu: '', poidsKg: '', valeurDeclaree: '', fraisExpedition: '' })
+      await load()
+    } catch (e) { const message = e.response?.data?.message || 'L’enregistrement du colis a échoué.'; setError(message); toast.error(message) }
+    finally { setBusy(false) }
+  }
+  const searchTracking = async (event) => {
+    event.preventDefault(); setTracked(null); setError('')
+    try { setTracked(dataOf(await colisApi.suivreColis(tracking.trim()))) }
+    catch (e) { setError(e.response?.data?.message || 'Aucun colis trouvé pour ce code.') }
+  }
+  const deliver = async (item) => {
+    const cni = window.prompt('Saisissez le numéro de CNI présenté par le destinataire :')
+    if (!cni?.trim()) return
+    setBusy(true)
+    try { await colisApi.remettreColis(item.idColis, { cniDestinataire: cni.trim() }); toast.success('Remise enregistrée.'); await load() }
+    catch (e) { const message = e.response?.data?.message || 'La remise n’a pas pu être enregistrée.'; setError(message); toast.error(message) }
+    finally { setBusy(false) }
   }
 
-  const filteredColis = colisList.filter(c => 
-    c.codeSuivi.toLowerCase().includes(recherche.toLowerCase()) ||
-    c.expediteur.toLowerCase().includes(recherche.toLowerCase()) ||
-    c.destinataire.toLowerCase().includes(recherche.toLowerCase())
-  )
-
-  return (
-    <div className="space-y-6">
-      
-      {/* En-tête */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-              <Package size={20} />
-            </span>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Fret, Messagerie & Expéditions Colis
-            </h1>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Pesée automatique au kilo, bordereau code-barres et suivi inter-agences <strong className="text-white">Yaoundé Mvan ⇄ Douala Bépanda</strong>
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs font-mono">
-          <span className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
-            Tarif de base : <strong className="text-emerald-400">500 FCFA / kg</strong> (Min. 2 500 F)
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* ========================================================
-            COLONNE GAUCHE (5/12) : NOUVELLE EXPÉDITION / ENREGISTREMENT
-           ======================================================== */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h2 className="text-sm font-black text-white flex items-center gap-2">
-                <Plus className="w-4 h-4 text-emerald-400" />
-                <span>Enregistrer un Colis</span>
-              </h2>
-              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
-                Poids : {poids} kg
-              </span>
-            </div>
-
-            <form onSubmit={handleCreerColis} className="space-y-4 text-xs">
-              
-              {/* Expéditeur */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Nom Expéditeur *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Alain FOTSO"
-                    value={expediteur}
-                    onChange={(e) => setExpediteur(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 outline-none transition"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Téléphone Expéditeur *</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="Ex: 699223344"
-                    value={telExp}
-                    onChange={(e) => setTelExp(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 outline-none transition"
-                  />
-                </div>
-              </div>
-
-              {/* Destinataire */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Nom Destinataire *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Marie KENNE"
-                    value={destinataire}
-                    onChange={(e) => setDestinataire(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 outline-none transition"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Téléphone Destinataire *</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="Ex: 677112233"
-                    value={telDest}
-                    onChange={(e) => setTelDest(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 outline-none transition"
-                  />
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Description / Nature du Colis *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Carton de vêtements, Pièces détachées, Documents..."
-                  value={nature}
-                  onChange={(e) => setNature(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 outline-none transition"
-                />
-              </div>
-
-              {/* Poids et Valeur estimée */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Poids Pesé (kg) *</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    required
-                    value={poids}
-                    onChange={(e) => setPoids(parseFloat(e.target.value) || 0.5)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 outline-none transition font-mono font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Valeur Déclarée (FCFA)</label>
-                  <input
-                    type="number"
-                    value={valeur}
-                    onChange={(e) => setValeur(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 outline-none transition font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Tarif calculé en direct */}
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <p className="font-mono text-[10px] text-slate-400 uppercase">Tarif Expédition Calculé</p>
-                  <p className="text-lg font-black text-emerald-400 font-mono mt-0.5">
-                    {fraisCalcules.toLocaleString()} FCFA
-                  </p>
-                </div>
-                <span className="text-[10px] font-bold px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  {poids} kg × 500 F
-                </span>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(16,185,129,0.3)] transition transform hover:-translate-y-0.5"
-              >
-                <CheckCircle2 size={16} className="stroke-[2.5]" />
-                <span>Enregistrer & Générer Bordereau ({fraisCalcules.toLocaleString()} F)</span>
-              </button>
-            </form>
-          </div>
-
-          {/* Bordereau Imprimable */}
-          {colisImprime && (
-            <div className="p-6 rounded-3xl bg-slate-900 border-2 border-emerald-500/40 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-2 text-emerald-400 font-black text-xs uppercase tracking-wide">
-                  <CheckCircle2 size={16} />
-                  <span>Bordereau Colis Prêt</span>
-                </div>
-                <button
-                  onClick={() => window.print()}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5 transition"
-                >
-                  <Printer size={14} />
-                  <span>Imprimer</span>
-                </button>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-mono space-y-2">
-                <div className="flex justify-between items-center pb-2 border-b border-dashed border-slate-800">
-                  <span className="font-black text-white text-sm">{colisImprime.codeSuivi}</span>
-                  <span className="text-emerald-400 font-bold">{colisImprime.fraisXaf.toLocaleString()} FCFA</span>
-                </div>
-                <p className="text-slate-300">Exp : <strong>{colisImprime.expediteur}</strong> ({colisImprime.telExp})</p>
-                <p className="text-slate-300">Dest : <strong>{colisImprime.destinataire}</strong> ({colisImprime.telDest})</p>
-                <p className="text-slate-400">{colisImprime.nature} · <span className="text-white font-bold">{colisImprime.poidsKg} kg</span></p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ========================================================
-            COLONNE DROITE (7/12) : LISTE & SUIVI DES EXPÉDITIONS
-           ======================================================== */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="p-5 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
-            
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <h2 className="text-xs font-mono font-black uppercase text-slate-400 tracking-wider">
-                Expéditions Récentes & Colis en Transit ({filteredColis.length})
-              </h2>
-
-              <div className="relative w-full sm:w-64">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Rechercher code, nom..."
-                  value={recherche}
-                  onChange={(e) => setRecherche(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-400 outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {filteredColis.map((c) => (
-                <div 
-                  key={c.id}
-                  className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 hover:border-slate-700 hover:bg-slate-950 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-black text-sm text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
-                        {c.codeSuivi}
-                      </span>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                        c.statut === 'EN_TRANSIT' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 animate-pulse' :
-                        c.statut === 'RECU_DESTINATION' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
-                        'bg-slate-800 text-slate-400 border border-slate-700'
-                      }`}>
-                        {c.statut.replace('_', ' ')}
-                      </span>
-                      <span className="text-[10px] text-slate-500">{c.dateEnvoi}</span>
-                    </div>
-
-                    <p className="text-xs text-slate-300">
-                      De : <strong className="text-white">{c.expediteur}</strong> ➔ À : <strong className="text-white">{c.destinataire}</strong> ({c.telDest})
-                    </p>
-                    <p className="text-[11px] text-slate-400">
-                      {c.nature} · Poids : <strong className="text-white">{c.poidsKg} kg</strong> · Valeur : {c.valeurXaf?.toLocaleString()} F
-                    </p>
-                  </div>
-
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
-                    <span className="text-base font-black text-emerald-400 font-mono">
-                      {c.fraisXaf.toLocaleString()} FCFA
-                    </span>
-                    <button
-                      onClick={() => {
-                        setColisImprime(c)
-                        toast.success(`Bordereau ${c.codeSuivi} chargé pour impression.`)
-                      }}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition"
-                    >
-                      <QrCode size={13} className="text-amber-400" />
-                      <span>Bordereau</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  const visible = items.filter((item) => [item.codeSuivi, item.nomDestinataire, item.descriptionContenu, item.statutColis].filter(Boolean).join(' ').toLowerCase().includes(query.toLowerCase()))
+  const fields = [['nomExpediteur', 'Nom de l’expéditeur'], ['telephoneExpediteur', 'Téléphone expéditeur'], ['nomDestinataire', 'Nom du destinataire'], ['prenomDestinataire', 'Prénom destinataire'], ['telephoneDestinataire', 'Téléphone destinataire'], ['cniDestinataire', 'CNI du destinataire']]
+  return <main className="admin-page parcels-page"><header className="admin-page-heading"><div><span className="admin-eyebrow">SERVICE FRET</span><h1>Colis & suivi</h1><p>Enregistrements et statuts récupérés depuis l’API.</p></div></header>
+    {error && <div className="office-alert" role="alert">{error}</div>}
+    <section className="parcel-tracking-card"><div><span className="admin-eyebrow">SUIVI CLIENT</span><h2>Retrouver un colis</h2><p>Le code de suivi permet de consulter le statut retourné par le serveur.</p></div><form onSubmit={searchTracking}><label htmlFor="tracking-code">Code de suivi<input id="tracking-code" required value={tracking} onChange={(e) => setTracking(e.target.value.toUpperCase())} placeholder="TRK-…" /></label><button className="button-primary"><Search size={15} /> Suivre</button></form>{tracked && <div className="parcel-tracking-result"><PackageCheck size={18} /><strong>{tracked.codeSuivi}</strong><span>{tracked.statutColis}</span><span>{tracked.descriptionContenu}</span></div>}</section>
+    {canManage && <section className="admin-panel parcel-create-panel"><div className="panel-heading"><div><span className="admin-eyebrow">NOUVEL ENVOI</span><h2>Enregistrer un colis</h2></div><Plus size={18} /></div>{role !== 'ROLE_ADMIN' && <p className="office-alert">La liste des agences de destination est réservée à l’administrateur par l’API actuelle. Demandez l’identifiant à l’agence avant de poursuivre.</p>}{agencyError && <p className="office-alert">{agencyError}</p>}<form className="parcel-create-form" onSubmit={create}><div className="parcel-form-grid">{fields.map(([key, label]) => <label key={key}>{label}<input required={key !== 'prenomDestinataire'} value={form[key]} onChange={(e) => update(key, e.target.value)} /></label>)}<label>Agence de retrait<select required value={form.idAgenceRetrait} onChange={(e) => update('idAgenceRetrait', e.target.value)}><option value="">Choisir une agence</option>{agencies.map((agency) => <option key={agency.idAgence} value={agency.idAgence}>{agency.nomAgence}</option>)}</select></label><label>Description<input required value={form.descriptionContenu} onChange={(e) => update('descriptionContenu', e.target.value)} /></label><label>Poids (kg)<input required min="0.1" step="0.1" type="number" value={form.poidsKg} onChange={(e) => update('poidsKg', e.target.value)} /></label><label>Valeur déclarée (XAF)<input min="0" step="1" type="number" value={form.valeurDeclaree} onChange={(e) => update('valeurDeclaree', e.target.value)} /></label><label>Frais confirmés par l’agence (XAF)<input required min="0" step="1" type="number" value={form.fraisExpedition} onChange={(e) => update('fraisExpedition', e.target.value)} /></label></div><p className="privacy-note">Le backend ne fournit pas de calculateur tarifaire ni de confirmation d’envoi SMS. Saisissez les frais validés par l’agence.</p><button className="button-primary" disabled={busy || !canManage || (role === 'ROLE_ADMIN' && agencies.length === 0)}>{busy ? 'Enregistrement…' : 'Enregistrer le colis'} <ArrowRight size={15} /></button></form></section>}
+    <section className="admin-panel parcel-list-panel"><div className="panel-heading"><div><span className="admin-eyebrow">REGISTRE</span><h2>Colis enregistrés</h2></div><div className="parcel-list-tools"><span>{visible.length} élément(s)</span><input aria-label="Filtrer les colis" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Code, destinataire, statut" /></div></div>{loading ? <div className="admin-empty"><LoaderCircle className="spin" /> Chargement des colis…</div> : error && items.length === 0 ? <div className="admin-empty">{error}</div> : visible.length ? <div className="parcel-list">{visible.map((item) => <article className="parcel-row" key={item.idColis}><div className="parcel-row-icon"><Package size={18} /></div><div className="parcel-row-main"><strong>{item.codeSuivi}</strong><span>{item.descriptionContenu || 'Description non fournie'}</span><small>{item.nomDestinataire} · {item.telephoneDestinataire}</small></div><div className="parcel-row-meta"><span>{item.statutColis}</span><small>{item.poidsKg} kg · {amount.format(item.fraisExpeditionXaf || 0)} XAF</small></div>{canManage && item.statutColis !== 'LIVRE' && <button type="button" className="icon-link-button" onClick={() => deliver(item)} disabled={busy} aria-label={`Remettre le colis ${item.codeSuivi}`}><Truck size={16} /></button>}</article>)}</div> : <div className="admin-empty"><Package size={21} />Aucun colis ne correspond à ce filtre.</div>}</section>
+  </main>
 }

@@ -37,6 +37,7 @@ export const gpsApi = {
   getPositions: () => api.get('/positions-gps/live'),
   getHistorique: (busId, params) => api.get(`/positions-gps/bus/${busId}`, { params }),
   getAlertes: () => api.get('/positions-gps/alertes'),
+  acquitterAlerte: (id) => api.put(`/positions-gps/alertes/${id}/acquitter`),
 }
 
 export const adminApi = {
