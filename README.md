@@ -51,7 +51,26 @@ Vite sert l’interface sur `http://localhost:5173` et relaie les requêtes API 
 
 ## Parcours principaux
 
-- Les voyageurs créent un compte distinct des comptes employés, choisissent un départ et un siège, puis retrouvent leurs billets dans leur espace.
-- Les billets confirmés peuvent être consultés et imprimés avec leur QR code.
-- Les ventes en ligne ne sont confirmées qu’après réception d’une notification Monetbil valide.
-- Les espaces équipe et administration sont protégés par des rôles côté API.
+- Les voyageurs créent un compte distinct des comptes équipe, consultent les départs réellement ouverts, choisissent un siège et paient depuis la page de réservation.
+- Après validation de la notification Monetbil par le backend, le billet et son QR signé sont consultables dans « Mes billets » ou avec le code billet et le téléphone. L’impression est prévue depuis ces deux parcours.
+- L’accueil affiche une scène de bus pilotée par le défilement avec une version statique pour le mouvement réduit ou l’absence de WebGL, puis les horaires, la recherche, la carte Leaflet de l’itinéraire et les services.
+- L’espace équipe sépare les opérations disponibles selon le rôle : billetterie, caisse, colis, GPS, maintenance et administration. Les opérations sans API sont signalées au lieu d’être simulées.
+- L’interface existe en thèmes clair et sombre, en français, avec des formats de dates `Africa/Douala` et des montants XAF.
+
+## Vérifications frontend
+
+Depuis `god-travel-frontend/` :
+
+```powershell
+npm run lint
+npm test
+npm run build
+```
+
+Le proxy local se règle avec `god-travel-frontend/.env` (copiez `.env.example`). Le client HTTP du navigateur appelle `/api`; il ne contient pas d’URL de backend.
+
+## Capacités à compléter côté backend
+
+- Le paiement Monetbil doit être configuré avec une clé de service et un secret de notification valides. Le frontend ne peut pas confirmer un paiement si la notification signée n’arrive pas au backend.
+- L’API ne propose pas encore la retenue temporaire de siège, l’idempotence serveur, la recherche avancée, la réservation de groupe, le consentement enregistré, les packs/fidélité, les règles de promotion, les profils et les workflows opérationnels hôtesse/chauffeur, ni plusieurs informations demandées pour le billet. Les écarts détaillés figurent dans `BACKEND_GAPS.md`.
+- Le jeton JWT reste persisté dans `localStorage`, comme dans l’architecture existante ; le frontend ne change pas le mécanisme d’authentification.
