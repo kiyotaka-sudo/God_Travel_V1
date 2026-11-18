@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, BusFront, CheckCircle2, Clock3, Printer, Search, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BusFront, CheckCircle2, Printer, Search, ShieldCheck } from 'lucide-react'
 import { billetterieApi } from '@api/index'
+import { parseCmInstant } from '@utils/domain'
 
 const money = new Intl.NumberFormat('fr-FR')
 
@@ -39,9 +40,9 @@ export default function TicketLookupPage() {
       {ticket && <section className="ticket-result-area"><div className="ticket-result-tools"><div className="ticket-confirmed"><CheckCircle2 size={18} /><span>Billet confirmé <small>· Paiement validé</small></span></div><button onClick={() => window.print()} className="ticket-print-button"><Printer size={16} /> Imprimer le billet</button></div>
         <article className="print-ticket" id="billet-print">
           <div className="print-ticket-top"><div className="print-ticket-brand"><img src="/god-travel-logo.jpg" alt="" /><div><strong>GOD TRAVEL</strong><span>UNITED EXPRESS · CAMEROUN</span></div></div><div className="ticket-status-stamp">VALIDÉ</div></div>
-          <div className="print-ticket-route"><div><small>DÉPART</small><strong>{ticket.villeDepart}</strong><span>{new Date(ticket.departPrevu).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}</span></div><ArrowRight size={21} /><div><small>ARRIVÉE</small><strong>{ticket.villeArrivee}</strong><span>Voyage interurbain</span></div></div>
+          <div className="print-ticket-route"><div><small>DÉPART</small><strong>{ticket.villeDepart}</strong><span>{new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Douala', dateStyle: 'long', timeStyle: 'short' }).format(new Date(parseCmInstant(ticket.departPrevu)))}</span></div><ArrowRight size={21} /><div><small>ARRIVÉE</small><strong>{ticket.villeArrivee}</strong><span>Voyage interurbain</span></div></div>
           <div className="print-ticket-rule" />
-          <div className="print-ticket-details"><div><small>PASSAGER</small><strong>{ticket.nomPassager}</strong></div><div><small>SIÈGE</small><strong>{ticket.numeroSiege}</strong></div><div><small>BUS</small><strong>{ticket.immatriculationBus}</strong></div><div><small>RÉFÉRENCE</small><strong>{ticket.codeBillet}</strong></div><div><small>MONTANT PAYÉ</small><strong>{money.format(ticket.montantXaf)} FCFA</strong></div><div><small>RÉSERVATION</small><strong>{ticket.codeReservation}</strong></div></div>
+          <div className="print-ticket-details"><div><small>PASSAGER</small><strong>{ticket.nomPassager}</strong></div><div><small>SIÈGE</small><strong>{ticket.numeroSiege}</strong></div><div><small>BUS</small><strong>{ticket.immatriculationBus}</strong></div><div><small>RÉFÉRENCE</small><strong>{ticket.codeBillet}</strong></div><div><small>MONTANT PAYÉ</small><strong>{money.format(ticket.montantXaf)} XAF</strong></div><div><small>RÉSERVATION</small><strong>{ticket.codeReservation}</strong></div></div>
           <div className="print-ticket-bottom"><img src={`data:image/png;base64,${ticket.qrCodeBase64}`} alt="Code de contrôle du billet" /><div><strong>Présentez ce code à l’embarquement.</strong><span>Conservez votre billet pendant le voyage.</span><span>Contact agence · Yaoundé / Douala</span></div></div>
         </article>
       </section>}
