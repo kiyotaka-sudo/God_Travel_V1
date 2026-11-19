@@ -2,6 +2,7 @@ package com.godtravel.backend.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,7 +14,7 @@ import java.time.LocalTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClotureCaisse {
+public class ClotureCaisse implements Persistable<String> {
 
     @Id
     @Column(name = "ID_CLOTURE", length = 20, nullable = false)
@@ -52,5 +53,25 @@ public class ClotureCaisse {
 
     @Column(name = "OBSERVATION_CLOTURE", length = 255)
     private String observationCloture;
+
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @Override
+    public String getId() {
+        return idCloture;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PostPersist
+    void markNotNew() {
+        this.isNew = false;
+    }
 }
 

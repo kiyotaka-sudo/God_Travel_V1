@@ -1293,6 +1293,12 @@ INSERT INTO `EMPLOYE` (`ID_EMPLOYE`, `ID_COMPAGNIE`, `ID_AGENCE`, `MATRICULE`, `
 ('EMP-003', 'CMP-001', 'AGC-001', 'EMP-GUI-01', 'BIYONG', 'Paul Guichet', '100234569', '+237 690 00 00 03', 'Guichetier Titulaire', '2024-02-01', 'ACTIF'),
 ('EMP-004', 'CMP-001', 'AGC-001', 'EMP-DRV-01', 'MBALLA', 'Eric Conducteur', '100234570', '+237 690 00 00 04', 'Chauffeur Ligne N3', '2024-02-01', 'ACTIF');
 
+-- 9. Utilisateurs applicatifs (Mot de passe chiffré BCrypt 12 pour : password123)
+INSERT INTO `UTILISATEUR` (`ID_UTILISATEUR`, `ID_EMPLOYE`, `ID_PROFIL`, `LOGIN`, `MOT_DE_PASSE_HASH`, `EST_ACTIF`) VALUES
+('USR-ADMIN-01', 'EMP-001', 'PRF-ADMIN', 'admin@godtravel.cm', '$2a$12$Sj56wBs0AOiM2k.aoWmy3e0a5KF.f.Uor.jmMiUNCT.THn4RH3JpS', 1),
+('USR-CHEF-01',  'EMP-002', 'PRF-CHEF',  'chef.yde@godtravel.cm', '$2a$12$Sj56wBs0AOiM2k.aoWmy3e0a5KF.f.Uor.jmMiUNCT.THn4RH3JpS', 1),
+('USR-GUI-01',   'EMP-003', 'PRF-GUI',   'guichet@godtravel.cm',  '$2a$12$Sj56wBs0AOiM2k.aoWmy3e0a5KF.f.Uor.jmMiUNCT.THn4RH3JpS', 1);
+
 -- Les comptes d'accès sont initialisés par le backend, avec APP_BOOTSTRAP_ADMIN_PASSWORD.
 
 -- 10. Ligne & Horaires

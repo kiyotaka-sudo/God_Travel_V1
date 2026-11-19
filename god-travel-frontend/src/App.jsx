@@ -104,7 +104,7 @@ export default function App() {
     <ApiStatusNotice />
     <Suspense fallback={<PageLoading />}><Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={isStaff ? <Navigate to="/app" replace /> : <LoginPage />} />
+      <Route path="/login" element={<Navigate to="/connexion" replace />} />
       <Route path="/connexion" element={<ClientAuthPage />} />
       <Route path="/inscription" element={<ClientAuthPage initialMode="register" />} />
       <Route path="/billet" element={<TicketLookupPage />} />

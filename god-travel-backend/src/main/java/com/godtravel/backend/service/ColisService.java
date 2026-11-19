@@ -69,7 +69,7 @@ public class ColisService {
             voyage = voyageRepository.findById(req.getIdVoyage()).orElse(null);
         }
 
-        String idColis = "CLS-" + DateTimeFormatter.ofPattern("yyMMddHHmmss").format(LocalDateTime.now()) + "-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        String idColis = "CLS-" + System.currentTimeMillis();
         String codeSuivi = "TRK-" + DateTimeFormatter.ofPattern("ddMM").format(LocalDateTime.now()) + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
         Colis colis = Colis.builder()

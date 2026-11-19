@@ -102,7 +102,7 @@ public class CaisseService {
             throw new BusinessException("Une session de caisse est déjà ouverte pour aujourd'hui.");
         }
 
-        String idCloture = "CLS-CAISSE-" + System.currentTimeMillis();
+        String idCloture = "CLS-" + System.currentTimeMillis();
         ClotureCaisse session = ClotureCaisse.builder()
                 .idCloture(idCloture)
                 .agence(agence)

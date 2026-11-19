@@ -17,12 +17,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'CHEF_AGENCE', 'GUICHETIER', 'COMPTABLE', 'MECANICIEN')")
 public class AdminController {
 
     private final AdminService adminService;
 
     @GetMapping("/stats")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats() {
         Map<String, Object> stats = adminService.getDashboardStats();
         return ResponseEntity.ok(ApiResponse.ok(stats));
@@ -54,16 +55,19 @@ public class AdminController {
     }
 
     @GetMapping("/utilisateurs")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<UtilisateurAdminView>>> getUtilisateurs() {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getUtilisateurs()));
     }
 
     @GetMapping("/profils")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<Profil>>> getProfils() {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getProfils()));
     }
 
     @PostMapping("/utilisateurs")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UtilisateurAdminView>> creerUtilisateur(@Valid @RequestBody CreerUtilisateurRequest request) {
         return ResponseEntity.ok(ApiResponse.ok("Compte créé et rattaché à un rôle", adminService.creerUtilisateur(request)));
     }

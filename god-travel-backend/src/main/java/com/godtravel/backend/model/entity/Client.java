@@ -2,6 +2,7 @@ package com.godtravel.backend.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDate;
 
@@ -11,7 +12,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Client {
+public class Client implements Persistable<String> {
 
     @Id
     @Column(name = "ID_CLIENT", length = 20, nullable = false)
@@ -40,5 +41,28 @@ public class Client {
 
     @Column(name = "TELEPHONE", length = 20, nullable = false)
     private String telephone;
+
+    @Column(name = "EMAIL", length = 120)
+    private String email;
+
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @Override
+    public String getId() {
+        return idClient;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PostPersist
+    void markNotNew() {
+        this.isNew = false;
+    }
 }
 

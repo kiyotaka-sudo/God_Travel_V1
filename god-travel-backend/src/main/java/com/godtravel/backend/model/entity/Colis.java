@@ -2,6 +2,7 @@ package com.godtravel.backend.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,7 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Colis {
+public class Colis implements Persistable<String> {
 
     @Id
     @Column(name = "ID_COLIS", length = 20, nullable = false)
@@ -76,5 +77,25 @@ public class Colis {
     @Column(name = "STATUT_COLIS", length = 20, nullable = false)
     @Builder.Default
     private String statutColis = "ENREGISTRE";
+
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @Override
+    public String getId() {
+        return idColis;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PostPersist
+    void markNotNew() {
+        this.isNew = false;
+    }
 }
 

@@ -27,9 +27,13 @@ export default function ClientAuthPage({ initialMode = 'login' }) {
       const response = mode === 'register' ? await authApi.inscrireClient(payload) : await authApi.loginClient({ login: payload.email, password: payload.password })
       const data = response.data?.data
       if (!data?.token) throw new Error(response.data?.message || 'Connexion impossible.')
-      setAuth(data.token, { id: data.idUtilisateur, login: data.login, email: data.login, telephone: data.telephone, nomComplet: data.nomComplet, role: 'ROLE_CLIENT' })
-      toast.success(mode === 'register' ? 'Votre compte est prêt.' : 'Bienvenue dans votre espace.')
-      navigate(safeInternalPath(location.state?.from || params.get('returnTo'), '/mon-espace'), { replace: true })
+      const rawRole = data.role === 'CLIENT' ? 'ROLE_CLIENT' : data.role?.startsWith('ROLE_') ? data.role : `ROLE_${data.role || 'CLIENT'}`
+      const isStaff = rawRole !== 'ROLE_CLIENT'
+      const [prenom = '', ...nomParts] = (data.nomComplet || data.login || payload.email).split(' ')
+      setAuth(data.token, { id: data.idUtilisateur, login: data.login, email: data.login, prenom: prenom || 'Utilisateur', nom: nomParts.join(' ') || '', telephone: data.telephone, nomComplet: data.nomComplet, role: rawRole, agenceId: data.idAgence, agenceNom: data.nomAgence })
+      toast.success(mode === 'register' ? 'Votre compte est prêt.' : `Bienvenue${prenom ? `, ${prenom}` : ''}.`)
+      const defaultDest = isStaff ? '/app' : '/mon-espace'
+      navigate(safeInternalPath(location.state?.from || params.get('returnTo'), defaultDest), { replace: true })
     } catch {
       const message = mode === 'register' ? 'Impossible de créer le compte avec ces informations. Vérifiez les champs ou connectez-vous si vous avez déjà un compte.' : 'Adresse e-mail ou mot de passe incorrect.'
       setFormError(message); toast.error(message)
@@ -39,7 +43,7 @@ export default function ClientAuthPage({ initialMode = 'login' }) {
   const update = (key, value) => setForm((previous) => ({ ...previous, [key]: value }))
   return <main className="login-page client-login-page">
     <section className="login-image-panel"><Link to="/" className="login-brand"><img src="/god-travel-logo.jpg" alt="" /><span>God-<b>travel</b></span></Link><div className="login-image-copy"><span className="section-kicker">ESPACE VOYAGEUR</span><h1>Un billet. Votre place. Votre voyage.</h1><p>Réservez en ligne, retrouvez vos titres de transport et gardez les informations de votre départ avec vous.</p></div><div className="login-route-note"><span>YAOUNDÉ · NVAN</span><span>DOUALA · BÉPANDA</span></div></section>
-    <section className="login-form-panel"><Link to="/" className="login-back"><ArrowLeft size={15} /> Accueil</Link><div className="login-form-inner"><span className="login-kicker">COMPTE VOYAGEUR</span><h2>{mode === 'register' ? 'Créer un compte' : 'Bienvenue'}</h2><p className="login-intro">{mode === 'register' ? 'Vos coordonnées servent à gérer vos réservations et vos billets.' : 'Connectez-vous pour consulter vos réservations et vos billets.'}</p>{params.has('returnTo') && <p className="session-expired-note" role="status">Votre session a expiré. Reconnectez-vous pour continuer.</p>}
+    <section className="login-form-panel"><Link to="/" className="login-back"><ArrowLeft size={15} /> Accueil</Link><div className="login-form-inner"><span className="login-kicker">{mode === 'register' ? 'COMPTE VOYAGEUR' : 'ESPACE CONNEXION'}</span><h2>{mode === 'register' ? 'Créer un compte' : 'Bienvenue'}</h2><p className="login-intro">{mode === 'register' ? 'Vos coordonnées servent à gérer vos réservations et vos billets.' : 'Saisissez vos identifiants pour accéder à votre espace.'}</p>{params.has('returnTo') && <p className="session-expired-note" role="status">Votre session a expiré. Reconnectez-vous pour continuer.</p>}
       <div className="client-auth-tabs"><button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Connexion</button><button type="button" className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Créer un compte</button></div>
       <form className="client-auth-form" onSubmit={submit}>
         {mode === 'register' && <><label htmlFor="client-firstname">Prénom<div><UserRound size={16} /><input id="client-firstname" required autoComplete="given-name" maxLength={50} value={form.prenom} onChange={(event) => update('prenom', event.target.value)} /></div></label><label htmlFor="client-lastname">Nom<div><UserRound size={16} /><input id="client-lastname" required autoComplete="family-name" maxLength={50} value={form.nom} onChange={(event) => update('nom', event.target.value)} /></div></label><label htmlFor="client-phone">Téléphone<div><Phone size={16} /><input id="client-phone" required type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={form.telephone} onChange={(event) => update('telephone', event.target.value)} placeholder="6 99 00 00 00" aria-describedby="client-phone-hint" /></div><small id="client-phone-hint">Mobile camerounais : 9 chiffres, commençant par 6.</small></label></>}
@@ -49,7 +53,7 @@ export default function ClientAuthPage({ initialMode = 'login' }) {
         {formError && <p className="client-auth-error" role="alert">{formError}</p>}
         {mode === 'register' && <p className="privacy-note">Vos informations sont utilisées pour gérer le compte et les réservations. <Link to="/confidentialite">Lire la politique de confidentialité</Link>. Le serveur ne propose pas encore l’enregistrement du consentement.</p>}
         <button className="login-submit" type="submit" disabled={loading}>{loading ? <><span>Un instant…</span><span className="button-spinner" /></> : <><span>{mode === 'register' ? 'Créer mon compte' : 'Me connecter'}</span><ArrowRight size={17} /></>}</button>
-      </form><div className="client-auth-staff">Vous faites partie de l’équipe ? <Link to="/login">Accès professionnel</Link></div>
+      </form>
     </div><div className="login-foot"><span>GOD TRAVEL</span><span>YAOUNDÉ — DOUALA</span></div></section>
   </main>
 }
