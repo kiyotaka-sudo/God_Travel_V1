@@ -27,12 +27,14 @@ public class GpsController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CHAUFFEUR')")
     public ResponseEntity<ApiResponse<PositionGps>> enregistrerPointage(@Valid @RequestBody PointageGpsDto dto) {
         PositionGps pos = gpsService.enregistrerPosition(dto);
         return ResponseEntity.ok(ApiResponse.ok("Pointage GPS enregistré", pos));
     }
 
     @GetMapping("/alertes")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CHEF_AGENCE')")
     public ResponseEntity<ApiResponse<List<AlerteGps>>> getAlertes() {
         List<AlerteGps> alertes = gpsService.getAlertesActives();
         return ResponseEntity.ok(ApiResponse.ok(alertes));

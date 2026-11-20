@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from 'lucide-re
 import toast from 'react-hot-toast'
 import { authApi } from '@api/index'
 import { useAuthStore } from '@store/authStore'
-import { safeInternalPath } from '@utils/domain'
+import { authenticatedDestination, normalizeRole } from '@utils/domain'
 
 export default function LoginPage() {
   const [login, setLogin] = useState('')
@@ -24,11 +24,10 @@ export default function LoginPage() {
       const data = response?.data?.data
       if (!data?.token) throw new Error('Le serveur n’a pas retourné de session valide.')
       const [prenom = '', ...nomParts] = (data.nomComplet || data.login || login).split(' ')
-      const role = data.role === 'CLIENT' ? 'ROLE_CLIENT' : data.role?.startsWith('ROLE_') ? data.role : `ROLE_${data.role || 'UTILISATEUR'}`
-      if (role === 'ROLE_CLIENT') throw new Error('Utilisez la connexion voyageur pour ouvrir votre compte.')
+      const role = normalizeRole(data.role || 'UTILISATEUR')
       setAuth(data.token, { id: data.idUtilisateur, login: data.login, email: data.login, prenom: prenom || 'Utilisateur', nom: nomParts.join(' ') || 'God Travel', nomComplet: data.nomComplet, role, agenceId: data.idAgence, agenceNom: data.nomAgence })
       toast.success(`Bienvenue${prenom ? `, ${prenom}` : ''}.`)
-      navigate(safeInternalPath(location.state?.from || params.get('returnTo'), '/app'), { replace: true })
+      navigate(authenticatedDestination(role, location.state?.from || params.get('returnTo')), { replace: true })
     } catch {
       toast.error('Identifiant ou mot de passe incorrect.')
     } finally { setLoading(false) }
@@ -42,10 +41,10 @@ export default function LoginPage() {
     </section>
     <section className="login-form-panel">
       <Link to="/" className="login-back"><ArrowLeft size={15} /> Retour au site public</Link>
-      <div className="login-form-inner"><span className="login-kicker">ESPACE ÉQUIPE</span><h2>Connexion</h2><p className="login-intro">Saisissez les identifiants de votre compte professionnel.</p>
+      <div className="login-form-inner"><span className="login-kicker">ESPACE GOD TRAVEL</span><h2>Connexion</h2><p className="login-intro">Saisissez l’adresse e-mail et le mot de passe de votre compte.</p>
         {params.has('returnTo') && <p className="session-expired-note" role="status">Votre session a expiré. Reconnectez-vous pour reprendre votre activité.</p>}
         <form className="login-form" onSubmit={handleLogin}>
-          <label htmlFor="staff-login">Identifiant professionnel</label>
+          <label htmlFor="staff-login">Adresse e-mail</label>
           <div className="login-input-wrap"><Mail size={16} aria-hidden="true" /><input id="staff-login" name="login" autoComplete="username" required value={login} onChange={(event) => setLogin(event.target.value)} placeholder="nom@agence.cm" /></div>
           <div className="login-password-heading"><label htmlFor="staff-password">Mot de passe</label></div>
           <div className="login-input-wrap"><LockKeyhole size={16} aria-hidden="true" /><input id="staff-password" name="password" autoComplete="current-password" required type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Votre mot de passe" /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div>

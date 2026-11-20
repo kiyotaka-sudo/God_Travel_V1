@@ -53,9 +53,11 @@ public class SecurityConfig {
                                 "/paiements/monetbil/notify",
                                 "/paiements/monetbil/statut",
                                 "/billets/consulter",
+                                "/colis/suivi/**",
                                 "/positions-gps/live",
                                 "/voyages",
-                                "/voyages/*/sieges"
+                                "/voyages/*/sieges",
+                                "/packs"
                         ).permitAll()
                         // Toutes les autres routes requièrent authentification
                         .anyRequest().authenticated()

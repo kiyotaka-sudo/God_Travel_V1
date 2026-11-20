@@ -4,6 +4,9 @@ import com.godtravel.backend.model.dto.ApiResponse;
 import com.godtravel.backend.model.dto.admin.CreerUtilisateurRequest;
 import com.godtravel.backend.model.dto.admin.UtilisateurAdminView;
 import com.godtravel.backend.model.entity.*;
+import com.godtravel.backend.model.entity.view.VueBilletterieParVoyage;
+import com.godtravel.backend.model.entity.view.VueFideliteClient;
+import com.godtravel.backend.model.entity.view.VueStatistiquesJournalieres;
 import com.godtravel.backend.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'CHEF_AGENCE', 'GUICHETIER', 'COMPTABLE', 'MECANICIEN')")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
     private final AdminService adminService;
@@ -27,6 +30,21 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats() {
         Map<String, Object> stats = adminService.getDashboardStats();
         return ResponseEntity.ok(ApiResponse.ok(stats));
+    }
+
+    @GetMapping("/stats/billetterie")
+    public ResponseEntity<ApiResponse<List<VueBilletterieParVoyage>>> getStatsBilletterie() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getStatsBilletterie()));
+    }
+
+    @GetMapping("/stats/journalieres")
+    public ResponseEntity<ApiResponse<List<VueStatistiquesJournalieres>>> getStatsJournalieres() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getStatsJournalieres()));
+    }
+
+    @GetMapping("/stats/fidelite")
+    public ResponseEntity<ApiResponse<List<VueFideliteClient>>> getStatsFidelite() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getStatsFidelite()));
     }
 
     @GetMapping("/compagnies")

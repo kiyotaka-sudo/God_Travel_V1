@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Ticket, Package, Wallet, MapPinned, Wrench, Shield, LogOut, Menu, X, ArrowLeft, Wifi, WifiOff } from 'lucide-react'
+import { LayoutDashboard, Ticket, Package, Wallet, MapPinned, Wrench, Shield, LogOut, Menu, X, ArrowLeft, Wifi, WifiOff, ScanLine, Truck, Users } from 'lucide-react'
 import { useAuthStore } from '@store/authStore'
 import ThemeToggle from '@components/ThemeToggle'
 
@@ -10,6 +10,9 @@ const menuItems = [
   { label: 'Fret & Colis', path: '/app/colis', icon: Package, roles: ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE', 'ROLE_GUICHETIER'] },
   { label: 'Caisse & Sessions', path: '/app/caisse', icon: Wallet, roles: ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE', 'ROLE_GUICHETIER', 'ROLE_COMPTABLE'] },
   { label: 'Suivi flotte GPS', path: '/app/gps', icon: MapPinned, roles: ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE'] },
+  { label: 'Embarquement', path: '/app/embarquement', icon: ScanLine, roles: ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE', 'ROLE_HOTESSE'] },
+  { label: 'Espace chauffeur', path: '/app/chauffeur', icon: Truck, roles: ['ROLE_CHAUFFEUR'] },
+  { label: 'Équipage des voyages', path: '/app/equipage', icon: Users, roles: ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE'] },
   { label: 'Atelier & Maintenance', path: '/app/maintenance', icon: Wrench, roles: ['ROLE_ADMIN', 'ROLE_MECANICIEN'] },
   { label: 'Administration', path: '/app/admin', icon: Shield, roles: ['ROLE_ADMIN'] },
 ]

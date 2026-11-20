@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole, Mail, Phone, UserRound
 import toast from 'react-hot-toast'
 import { authApi } from '@api/index'
 import { useAuthStore } from '@store/authStore'
-import { isValidCmMobile, normalizeCmPhone, safeInternalPath } from '@utils/domain'
+import { authenticatedDestination, isValidCmMobile, normalizeCmPhone, normalizeRole } from '@utils/domain'
 
 export default function ClientAuthPage({ initialMode = 'login' }) {
   const [mode, setMode] = useState(initialMode)
@@ -27,13 +27,11 @@ export default function ClientAuthPage({ initialMode = 'login' }) {
       const response = mode === 'register' ? await authApi.inscrireClient(payload) : await authApi.loginClient({ login: payload.email, password: payload.password })
       const data = response.data?.data
       if (!data?.token) throw new Error(response.data?.message || 'Connexion impossible.')
-      const rawRole = data.role === 'CLIENT' ? 'ROLE_CLIENT' : data.role?.startsWith('ROLE_') ? data.role : `ROLE_${data.role || 'CLIENT'}`
-      const isStaff = rawRole !== 'ROLE_CLIENT'
+      const rawRole = normalizeRole(data.role || 'CLIENT')
       const [prenom = '', ...nomParts] = (data.nomComplet || data.login || payload.email).split(' ')
       setAuth(data.token, { id: data.idUtilisateur, login: data.login, email: data.login, prenom: prenom || 'Utilisateur', nom: nomParts.join(' ') || '', telephone: data.telephone, nomComplet: data.nomComplet, role: rawRole, agenceId: data.idAgence, agenceNom: data.nomAgence })
       toast.success(mode === 'register' ? 'Votre compte est prêt.' : `Bienvenue${prenom ? `, ${prenom}` : ''}.`)
-      const defaultDest = isStaff ? '/app' : '/mon-espace'
-      navigate(safeInternalPath(location.state?.from || params.get('returnTo'), defaultDest), { replace: true })
+      navigate(authenticatedDestination(rawRole, location.state?.from || params.get('returnTo')), { replace: true })
     } catch {
       const message = mode === 'register' ? 'Impossible de créer le compte avec ces informations. Vérifiez les champs ou connectez-vous si vous avez déjà un compte.' : 'Adresse e-mail ou mot de passe incorrect.'
       setFormError(message); toast.error(message)

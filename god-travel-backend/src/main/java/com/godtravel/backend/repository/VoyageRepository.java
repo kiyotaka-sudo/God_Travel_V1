@@ -15,6 +15,8 @@ public interface VoyageRepository extends JpaRepository<Voyage, String> {
     Optional<Voyage> findByCodeVoyage(String codeVoyage);
     List<Voyage> findByStatutVoyage(String statutVoyage);
     List<Voyage> findByAgence_IdAgence(String idAgence);
+    List<Voyage> findByStatutVoyageAndDateHeureDepartPrevueGreaterThanEqualAndDateHeureDepartPrevueLessThanOrderByDateHeureDepartPrevueAsc(
+            String statutVoyage, LocalDateTime debut, LocalDateTime fin);
 
     @Query("SELECT v FROM Voyage v WHERE v.ligne.idLigne = :idLigne AND v.dateHeureDepartPrevue >= :dateDebut AND v.statutVoyage IN ('PROGRAMME', 'OUVERT', 'CONFIRME') ORDER BY v.dateHeureDepartPrevue ASC")
     List<Voyage> findVoyagesDisponibles(@Param("idLigne") String idLigne, @Param("dateDebut") LocalDateTime dateDebut);

@@ -4,6 +4,9 @@ import com.godtravel.backend.model.entity.*;
 import com.godtravel.backend.model.dto.admin.CreerUtilisateurRequest;
 import com.godtravel.backend.model.dto.admin.UtilisateurAdminView;
 import com.godtravel.backend.repository.*;
+import com.godtravel.backend.model.entity.view.VueBilletterieParVoyage;
+import com.godtravel.backend.model.entity.view.VueFideliteClient;
+import com.godtravel.backend.model.entity.view.VueStatistiquesJournalieres;
 import com.godtravel.backend.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +36,9 @@ public class AdminService {
     private final EmployeRepository employeRepository;
     private final ProfilRepository profilRepository;
     private final PasswordEncoder passwordEncoder;
+    private final VueBilletterieParVoyageRepository vueBilletterieRepository;
+    private final VueStatistiquesJournalieresRepository vueStatistiquesRepository;
+    private final VueFideliteClientRepository vueFideliteRepository;
 
     public List<Compagnie> getCompagnies() {
         return compagnieRepository.findAll();
@@ -141,6 +147,21 @@ public class AdminService {
         stats.put("chiffreAffairesFret", caTotalColis);
         stats.put("chiffreAffairesGlobal", caTotalBillets.add(caTotalColis));
         return stats;
+    }
+
+    @Transactional(readOnly = true)
+    public List<VueBilletterieParVoyage> getStatsBilletterie() {
+        return vueBilletterieRepository.findAllByOrderByDateHeureDepartPrevueDesc();
+    }
+
+    @Transactional(readOnly = true)
+    public List<VueStatistiquesJournalieres> getStatsJournalieres() {
+        return vueStatistiquesRepository.findAllByOrderByDateJourDesc();
+    }
+
+    @Transactional(readOnly = true)
+    public List<VueFideliteClient> getStatsFidelite() {
+        return vueFideliteRepository.findTop10ByOrderBySoldeGratuitsCalculeDesc();
     }
 }
 

@@ -1,6 +1,7 @@
 package com.godtravel.backend.model.dto.colis;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -37,11 +38,14 @@ public class ColisCreationRequest {
 
     @NotNull(message = "Le poids est obligatoire")
     @DecimalMin(value = "0.1", message = "Poids minimum 0.1 kg")
+    @Digits(integer = 4, fraction = 2, message = "Le poids est invalide")
     private BigDecimal poidsKg;
 
+    @DecimalMin(value = "0.0", message = "La valeur déclarée ne peut pas être négative")
+    @Digits(integer = 10, fraction = 2, message = "La valeur déclarée est invalide")
     private BigDecimal valeurDeclaree;
 
-    @NotNull(message = "Les frais d'expédition sont obligatoires")
+    // Champ historique accepté pour compatibilité avec les anciens clients, ignoré par le serveur.
     private BigDecimal fraisExpedition;
 
     private String idVoyage;

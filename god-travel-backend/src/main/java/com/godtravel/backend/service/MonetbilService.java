@@ -43,6 +43,8 @@ public class MonetbilService {
     private final ModePaiementRepository modePaiementRepository;
     private final BilletRepository billetRepository;
     private final ColisRepository colisRepository;
+    private final FideliteService fideliteService;
+    private final PromotionService promotionService;
 
     @Value("${monetbil.service-key:}") private String serviceKey;
     @Value("${monetbil.service-secret:}") private String serviceSecret;
@@ -178,6 +180,7 @@ public class MonetbilService {
             if (paiement.getBillet() != null) {
                 paiement.getBillet().setStatutBillet("VALIDE");
                 billetRepository.save(paiement.getBillet());
+                fideliteService.incrementerCompteur(paiement.getBillet().getClient().getIdClient());
             }
             if (paiement.getColis() != null) {
                 paiement.getColis().setStatutColis("EN_TRANSIT");
@@ -246,6 +249,7 @@ public class MonetbilService {
 
     private void annulerBilletEnEchec(Paiement paiement) {
         if (paiement.getBillet() != null && "EN_ATTENTE_PAIEMENT".equals(paiement.getBillet().getStatutBillet())) {
+            promotionService.annulerUtilisation(paiement.getBillet().getPromotion());
             paiement.getBillet().setStatutBillet("ANNULE");
             billetRepository.save(paiement.getBillet());
         }

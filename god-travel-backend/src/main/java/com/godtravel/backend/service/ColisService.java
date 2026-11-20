@@ -3,6 +3,7 @@ package com.godtravel.backend.service;
 import com.godtravel.backend.exception.BusinessException;
 import com.godtravel.backend.exception.ResourceNotFoundException;
 import com.godtravel.backend.model.dto.colis.ColisCreationRequest;
+import com.godtravel.backend.model.dto.colis.EstimationFretDto;
 import com.godtravel.backend.model.entity.*;
 import com.godtravel.backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -12,12 +13,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ColisService {
+
+    private static final BigDecimal TARIF_BASE_XAF = new BigDecimal("500.00");
+    private static final BigDecimal TARIF_KILO_XAF = new BigDecimal("150.00");
+    private static final BigDecimal TAUX_ASSURANCE = new BigDecimal("0.01");
 
     private final ColisRepository colisRepository;
     private final ClientRepository clientRepository;
@@ -35,6 +42,26 @@ public class ColisService {
     public Colis getColisParCodeSuivi(String codeSuivi) {
         return colisRepository.findByCodeSuivi(codeSuivi)
                 .orElseThrow(() -> new ResourceNotFoundException("Colis", "codeSuivi", codeSuivi));
+    }
+
+    public EstimationFretDto estimerTarif(BigDecimal poidsKg, BigDecimal valeurDeclaree) {
+        if (poidsKg == null || poidsKg.compareTo(new BigDecimal("0.1")) < 0) {
+            throw new BusinessException("Le poids minimum pour un colis est de 0,1 kg.");
+        }
+        if (poidsKg.precision() - poidsKg.scale() > 4 || poidsKg.scale() > 2) {
+            throw new BusinessException("Le poids dépasse la capacité enregistrable du colis.");
+        }
+        BigDecimal valeur = valeurDeclaree == null ? BigDecimal.ZERO : valeurDeclaree;
+        if (valeur.signum() < 0 || valeur.precision() - valeur.scale() > 10 || valeur.scale() > 2) {
+            throw new BusinessException("La valeur déclarée doit être positive et ne pas dépasser 2 décimales.");
+        }
+
+        BigDecimal poids = poidsKg.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal base = TARIF_BASE_XAF;
+        BigDecimal poidsXaf = poids.multiply(TARIF_KILO_XAF).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal assuranceXaf = valeur.multiply(TAUX_ASSURANCE).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal total = base.add(poidsXaf).add(assuranceXaf).setScale(2, RoundingMode.HALF_UP);
+        return new EstimationFretDto(poids, valeur.setScale(2, RoundingMode.HALF_UP), base, poidsXaf, assuranceXaf, total);
     }
 
     @Transactional
@@ -72,6 +99,9 @@ public class ColisService {
         String idColis = "CLS-" + System.currentTimeMillis();
         String codeSuivi = "TRK-" + DateTimeFormatter.ofPattern("ddMM").format(LocalDateTime.now()) + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
+        BigDecimal valeurDeclaree = req.getValeurDeclaree() != null ? req.getValeurDeclaree() : BigDecimal.ZERO;
+        BigDecimal tarifCalcule = estimerTarif(req.getPoidsKg(), valeurDeclaree).totalXaf();
+
         Colis colis = Colis.builder()
                 .idColis(idColis)
                 .clientExpediteur(clientExpediteur)
@@ -86,8 +116,8 @@ public class ColisService {
                 .cniDestinataire(req.getCniDestinataire())
                 .descriptionContenu(req.getDescriptionContenu())
                 .poidsKg(req.getPoidsKg())
-                .valeurDeclareeXaf(req.getValeurDeclaree() != null ? req.getValeurDeclaree() : java.math.BigDecimal.ZERO)
-                .fraisExpeditionXaf(req.getFraisExpedition())
+                .valeurDeclareeXaf(valeurDeclaree)
+                .fraisExpeditionXaf(tarifCalcule)
                 .dateEnregistrement(LocalDateTime.now())
                 .statutColis("ENREGISTRE")
                 .build();

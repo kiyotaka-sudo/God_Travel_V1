@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, Armchair, BusFront, CircleHelp, Clock3, PackageCheck, ShieldCheck, Ticket, LoaderCircle } from 'lucide-react'
-import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
-import { billetterieApi } from '@api/index'
+import { billetterieApi, gpsApi } from '@api/index'
 import ScrollJourney from '@components/bus/ScrollJourney'
 import ThemeToggle from '@components/ThemeToggle'
 import { useAuthStore } from '@store/authStore'
@@ -15,6 +13,28 @@ const number = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
 const dateTime = (value) => value ? new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Douala', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(parseCmInstant(value))) : 'Horaire non disponible'
 const money = (value) => value != null ? `${number.format(value).replaceAll('\u202f', ' ')} XAF` : 'Tarif communiqué par l’agence'
 const dataOf = (response) => response?.data?.data || []
+const CityShareRouteMap = lazy(() => import('@components/maps/CityShareRouteMap'))
+
+function RouteMap({ route, places, livePositions }) {
+  const sectionRef = useRef(null)
+  const [entered, setEntered] = useState(false)
+
+  useEffect(() => {
+    if (!sectionRef.current) return undefined
+    if (!('IntersectionObserver' in window)) { setEntered(true); return undefined }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setEntered(true); observer.disconnect() }
+    }, { rootMargin: '320px' })
+    observer.observe(sectionRef.current)
+    return () => observer.disconnect()
+  }, [])
+
+  const loading = <div className="maplibre-map-loading"><LoaderCircle size={19} className="spin" /><span>Chargement de la carte…</span></div>
+  return <div ref={sectionRef} className="landing-map-wrap">
+    {entered ? <Suspense fallback={loading}><CityShareRouteMap route={route} places={places} livePositions={livePositions} /></Suspense> : loading}
+    <div className="map-caption"><span className={`map-live-dot${livePositions.length ? ' is-live' : ''}`} /> <span>{livePositions.length ? 'POSITION GPS EN DIRECT' : 'PARCOURS INDICATIF'}</span><span>Yaoundé → Douala</span></div>
+  </div>
+}
 
 export default function LandingPage() {
   const token = useAuthStore((state) => state.token)
@@ -24,13 +44,24 @@ export default function LandingPage() {
   const [loadingTrips, setLoadingTrips] = useState(true)
   const [tripError, setTripError] = useState('')
   const [selectedTrip, setSelectedTrip] = useState('')
+  const [livePositions, setLivePositions] = useState([])
 
   useEffect(() => {
     let active = true
     billetterieApi.getVoyages().then((response) => { if (active) setTrips(dataOf(response)) })
       .catch((error) => { if (active) setTripError(error.response?.data?.message || 'Les départs ne peuvent pas être chargés pour le moment.') })
       .finally(() => { if (active) setLoadingTrips(false) })
-    return () => { active = false }
+    const loadPositions = () => gpsApi.getPositions().then((response) => {
+      if (!active) return
+      const now = Date.now()
+      setLivePositions(dataOf(response).filter((position) => {
+        const instant = parseCmInstant(position.dateHeureReleve)
+        return Number.isFinite(instant) && now >= instant && now - instant <= 5 * 60 * 1000
+      }))
+    }).catch(() => { if (active) setLivePositions([]) })
+    loadPositions()
+    const refresh = window.setInterval(loadPositions, 15_000)
+    return () => { active = false; window.clearInterval(refresh) }
   }, [])
 
   const departures = useMemo(() => trips.filter((trip) => {
@@ -58,7 +89,7 @@ export default function LandingPage() {
 
     <section className="service-strip" id="services"><div className="section-kicker">LES SERVICES</div><h2>Le trajet et <em>ce qui l’accompagne.</em></h2><div className="service-grid"><article><Armchair /><span>01</span><h3>Votre siège</h3><p>La disponibilité du siège est vérifiée depuis le plan du départ sélectionné.</p></article><article><Ticket /><span>02</span><h3>Votre billet</h3><p>Après paiement confirmé, retrouvez le billet nominatif et son QR signé par le serveur.</p></article><article><PackageCheck /><span>03</span><h3>Fret et colis</h3><p>Le suivi par code est disponible. Le tarif d’expédition est confirmé par l’agence.</p></article><article><ShieldCheck /><span>04</span><h3>Paiement mobile</h3><p>Le statut du paiement est confirmé par la notification de l’opérateur.</p></article></div><div className="service-note"><CircleHelp size={15} /> Les packs, la fidélité, le devis de fret et le fonctionnement hors ligne ne sont pas disponibles dans l’API actuelle.</div></section>
 
-    <section className="route-section" id="route"><div className="route-intro"><div className="section-kicker">L’ITINÉRAIRE</div><h2>La Nationale 3,<br /><em>entre deux villes.</em></h2><p>Repères indicatifs sur l’axe Yaoundé–Douala. Cette carte présente le parcours géographique, pas la position en direct d’un véhicule.</p><div className="route-stops">{places.map((place) => <span key={place.name}><i /> {place.name}</span>)}</div></div><div className="landing-map-wrap"><MapContainer className="landing-map" center={[3.9, 10.65]} zoom={7} scrollWheelZoom={false} attributionControl><TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" /><Polyline positions={routeN3} pathOptions={{ color: '#14b2b6', weight: 4, opacity: .85 }} />{places.map((place) => <CircleMarker key={place.name} center={place.point} radius={6} pathOptions={{ color: '#0b1417', weight: 2, fillColor: '#14b2b6', fillOpacity: 1 }}><Tooltip>{place.name}</Tooltip></CircleMarker>)}</MapContainer><div className="map-caption"><span className="map-live-dot" /> <span>ITINÉRAIRE INDICATIF</span><span>Yaoundé → Douala</span></div></div></section>
+    <section className="route-section" id="route"><div className="route-intro"><div className="section-kicker">L’ITINÉRAIRE</div><h2>La Nationale 3,<br /><em>entre deux villes.</em></h2><p>{livePositions.length ? 'Les positions récentes des bus apparaissent sur le tracé lorsqu’elles sont remontées par le système GPS.' : 'Le tracé présente l’axe Yaoundé–Douala. Les bus apparaissent ici lorsqu’une position GPS récente est reçue.'}</p><div className="route-stops">{places.map((place) => <span key={place.name}><i /> {place.name}</span>)}</div></div><RouteMap route={routeN3} places={places} livePositions={livePositions} /></section>
 
     <section className="final-cta"><div className="section-kicker">PRÊT POUR LE DÉPART ?</div><h2>Choisissez un horaire.<br /><em>Nous vous gardons une place.</em></h2><p>Connectez-vous à votre compte voyageur pour réserver et suivre le statut du paiement.</p><Link className="button-primary" to="/reserver">Consulter les départs <ArrowRight size={16} /></Link></section>
     <footer className="landing-footer"><Link to="/" className="footer-mark">God-travel<span>UNITED EXPRESS · CAMEROUN</span></Link><Link to="/confidentialite">Confidentialité</Link><Link to="/billet">Retrouver un billet</Link><span>Voyagez · Explorez · Arrivez</span></footer>

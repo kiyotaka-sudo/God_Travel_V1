@@ -2,6 +2,8 @@ package com.godtravel.backend.controller;
 
 import com.godtravel.backend.model.dto.ApiResponse;
 import com.godtravel.backend.model.dto.colis.ColisCreationRequest;
+import com.godtravel.backend.model.dto.colis.EstimationFretDto;
+import com.godtravel.backend.model.dto.colis.EstimationFretRequest;
 import com.godtravel.backend.model.entity.Colis;
 import com.godtravel.backend.service.ColisService;
 import jakarta.validation.Valid;
@@ -20,7 +22,14 @@ public class ColisController {
 
     private final ColisService colisService;
 
+    @PostMapping("/estimer-tarif")
+    @PreAuthorize("hasAnyRole('ADMIN','CHEF_AGENCE','GUICHETIER')")
+    public ResponseEntity<ApiResponse<EstimationFretDto>> estimerTarif(@Valid @RequestBody EstimationFretRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(colisService.estimerTarif(request.poidsKg(), request.valeurDeclaree())));
+    }
+
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CHEF_AGENCE', 'GUICHETIER')")
     public ResponseEntity<ApiResponse<List<Colis>>> listerColis(@RequestParam(value = "statut", required = false) String statut) {
         List<Colis> list = colisService.listerColis(statut);
         return ResponseEntity.ok(ApiResponse.ok(list));

@@ -3,6 +3,7 @@ package com.godtravel.backend.model.dto.billetterie;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -37,5 +38,8 @@ public class ReservationRequest {
     private String idClotureCaisse;
 
     private BigDecimal montantPaye;
+
+    @Size(max = 20, message = "Le code promo est limité à 20 caractères")
+    private String codePromo;
 }
 

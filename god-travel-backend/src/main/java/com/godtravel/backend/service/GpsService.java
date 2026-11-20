@@ -25,7 +25,7 @@ public class GpsService {
     private final VoyageRepository voyageRepository;
 
     public List<PositionGps> getLatestPositions() {
-        return positionGpsRepository.findLatestPositions();
+        return positionGpsRepository.findLatestPositionsSince(LocalDateTime.now().minusMinutes(5));
     }
 
     public List<AlerteGps> getAlertesActives() {

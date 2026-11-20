@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
             if (id.includes('/node_modules/@react-three/drei/')) return 'vendor-drei'
             if (id.includes('/node_modules/gsap/')) return 'vendor-gsap'
             if (id.includes('/node_modules/lenis/')) return 'vendor-lenis'
+            if (id.includes('/node_modules/maplibre-gl/')) return 'vendor-maplibre'
             return undefined
           },
         },

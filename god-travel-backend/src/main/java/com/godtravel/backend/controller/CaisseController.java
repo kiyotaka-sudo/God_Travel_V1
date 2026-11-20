@@ -23,7 +23,7 @@ public class CaisseController {
     private final CaisseService caisseService;
 
     @GetMapping("/releves")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CHEF_AGENCE', 'COMPTABLE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CHEF_AGENCE', 'GUICHETIER', 'COMPTABLE')")
     public ResponseEntity<ApiResponse<List<VueReleveCaisseJournalier>>> getReleves() {
         List<VueReleveCaisseJournalier> releves = caisseService.getRelevesJournaliers();
         return ResponseEntity.ok(ApiResponse.ok(releves));
@@ -58,7 +58,7 @@ public class CaisseController {
     }
 
     @PutMapping("/{id}/fermer")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CHEF_AGENCE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CHEF_AGENCE', 'GUICHETIER')")
     public ResponseEntity<ApiResponse<ClotureCaisse>> fermerCaisse(
             @PathVariable("id") String idCloture,
             @RequestBody Map<String, Object> body

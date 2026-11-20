@@ -31,7 +31,7 @@ public class IncidentRoute {
     @Column(name = "DESCRIPTION_DETAILLEE", length = 255, nullable = false)
     private String descriptionDetaillee;
 
-    @Column(name = "TEMPS_RETARD_ESTIME_MIN")
+    @Column(name = "TEMPS_RETARD_ESTIME_MIN", nullable = false)
     private Integer tempsRetardEstimeMin;
 }
 

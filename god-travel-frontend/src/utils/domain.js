@@ -6,6 +6,61 @@ export function isRoleAllowed(role, allowedRoles = []) {
   return allowedRoles.includes(normalizeRole(role))
 }
 
+export const STAFF_ROLES = [
+  'ROLE_ADMIN',
+  'ROLE_CHEF_AGENCE',
+  'ROLE_GUICHETIER',
+  'ROLE_HOTESSE',
+  'ROLE_CHAUFFEUR',
+  'ROLE_MECANICIEN',
+  'ROLE_COMPTABLE',
+]
+
+const ROLE_HOME_PATHS = {
+  ROLE_ADMIN: '/app',
+  ROLE_CHEF_AGENCE: '/app/billetterie',
+  ROLE_GUICHETIER: '/app/billetterie',
+  ROLE_HOTESSE: '/app/embarquement',
+  ROLE_CHAUFFEUR: '/app/chauffeur',
+  ROLE_MECANICIEN: '/app/maintenance',
+  ROLE_COMPTABLE: '/app/caisse',
+  ROLE_CLIENT: '/mon-espace',
+}
+
+const STAFF_PATH_ROLES = {
+  '/app': STAFF_ROLES,
+  '/app/billetterie': ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE', 'ROLE_GUICHETIER'],
+  '/app/colis': ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE', 'ROLE_GUICHETIER'],
+  '/app/caisse': ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE', 'ROLE_GUICHETIER', 'ROLE_COMPTABLE'],
+  '/app/gps': ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE'],
+  '/app/maintenance': ['ROLE_ADMIN', 'ROLE_MECANICIEN'],
+  '/app/embarquement': ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE', 'ROLE_HOTESSE'],
+  '/app/chauffeur': ['ROLE_CHAUFFEUR'],
+  '/app/equipage': ['ROLE_ADMIN', 'ROLE_CHEF_AGENCE'],
+  '/app/admin': ['ROLE_ADMIN'],
+}
+
+export function roleHomePath(role) {
+  return ROLE_HOME_PATHS[normalizeRole(role)] || '/'
+}
+
+function roleCanOpenPath(role, pathname) {
+  const normalizedRole = normalizeRole(role)
+  if (normalizedRole === 'ROLE_CLIENT') return ['/mon-espace', '/reserver'].includes(pathname)
+  if (!STAFF_ROLES.includes(normalizedRole)) return false
+  const allowedRoles = STAFF_PATH_ROLES[pathname]
+  return Boolean(allowedRoles?.includes(normalizedRole))
+}
+
+/** Keep a requested private URL only when the authenticated role can open it. */
+export function authenticatedDestination(role, requestedPath) {
+  const fallback = roleHomePath(role)
+  const candidate = safeInternalPath(requestedPath, '')
+  if (!candidate) return fallback
+  const pathname = candidate.split(/[?#]/, 1)[0] || '/'
+  return roleCanOpenPath(role, pathname) ? candidate : fallback
+}
+
 export function safeInternalPath(value, fallback) {
   return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : fallback
 }

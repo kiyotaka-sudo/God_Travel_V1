@@ -69,6 +69,7 @@ public class BilletController {
     }
 
     @GetMapping("/{code}/qr")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> getQrCode(@PathVariable("code") String codeBillet) {
         byte[] qrImage = billetterieService.genererQrCode(codeBillet);
         return ResponseEntity.ok()

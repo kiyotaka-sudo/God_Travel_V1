@@ -18,8 +18,43 @@ export const billetterieApi = {
   getQrCode: (codeBillet) => api.get(`/billets/${codeBillet}/qr`, { responseType: 'blob' }),
 }
 
+export const bagageApi = {
+  enregistrer: (data) => api.post('/bagages', data),
+  getBagages: (idBillet) => api.get(`/bagages/billet/${idBillet}`),
+}
+
+export const siegeApi = {
+  verrouiller: (idVoyage, numSiege) => api.post(`/voyages/${idVoyage}/verrouiller-siege`, { numSiege }),
+  liberer: (idVoyage, numSiege) => api.delete(`/voyages/${idVoyage}/liberer-siege`, { params: { numSiege } }),
+}
+
+export const embarquementApi = {
+  getManifeste: (idVoyage) => api.get(`/embarquement/voyage/${idVoyage}`),
+  validerEmbarquement: (data) => api.post('/embarquement/valider', data),
+}
+
+export const equipageApi = {
+  getVoyages: () => api.get('/equipage/voyages'),
+  getEmployes: () => api.get('/equipage/employes'),
+  getRoles: () => api.get('/equipage/roles'),
+  getEquipage: (idVoyage) => api.get(`/equipage/voyage/${idVoyage}`),
+  affecter: (idVoyage, data) => api.post(`/equipage/voyage/${idVoyage}`, data),
+  retirer: (idVoyage, idEmploye) => api.delete(`/equipage/voyage/${idVoyage}/${idEmploye}`),
+}
+
+export const incidentApi = {
+  declarer: (data) => api.post('/incidents-route', data),
+  getPourVoyage: (idVoyage) => api.get(`/incidents-route/voyage/${idVoyage}`),
+  getJour: () => api.get('/incidents-route/jour'),
+}
+
+export const chauffeurApi = {
+  getMonTrajet: () => api.get('/chauffeur/mon-trajet'),
+}
+
 export const colisApi = {
   enregistrerColis: (data) => api.post('/colis', data),
+  estimerTarif: (data) => api.post('/colis/estimer-tarif', data),
   listerColis: (statut) => api.get('/colis', { params: statut ? { statut } : {} }),
   suivreColis: (codeSuivi) => api.get(`/colis/suivi/${encodeURIComponent(codeSuivi)}`),
   remettreColis: (idColis, data) => api.put(`/colis/${idColis}/remise`, data),
@@ -33,6 +68,30 @@ export const caisseApi = {
   fermerSession: (id, data) => api.put(`/sessions-caisse/${id}/fermer`, data),
 }
 
+export const fideliteApi = {
+  monCompteur: () => api.get('/fidelite/mon-compteur'),
+  compteurClient: (idClient) => api.get(`/fidelite/client/${idClient}`),
+}
+
+export const packApi = {
+  getDisponibles: () => api.get('/packs'),
+  souscrire: (data) => api.post('/packs/souscrire', data),
+  mesPacks: () => api.get('/packs/mes-packs'),
+}
+
+export const promotionApi = {
+  verifier: (codePromo) => api.post('/promotions/verifier', { codePromo }),
+  lister: () => api.get('/promotions'),
+}
+
+export const documentBusApi = {
+  getDocuments: () => api.get('/documents-bus'),
+  getAlertes: () => api.get('/documents-bus/alertes'),
+  enregistrer: (data) => api.post('/documents-bus', data),
+  getBus: () => api.get('/documents-bus/bus'),
+  getTypes: () => api.get('/documents-bus/types'),
+}
+
 export const gpsApi = {
   getPositions: () => api.get('/positions-gps/live'),
   getHistorique: (busId, params) => api.get(`/positions-gps/bus/${busId}`, { params }),
@@ -42,6 +101,9 @@ export const gpsApi = {
 
 export const adminApi = {
   getStats: () => api.get('/admin/stats'),
+  getStatsBilletterie: () => api.get('/admin/stats/billetterie'),
+  getStatsJournalieres: () => api.get('/admin/stats/journalieres'),
+  getStatsFidelite: () => api.get('/admin/stats/fidelite'),
   getCompagnies: () => api.get('/admin/compagnies'),
   getAgences: () => api.get('/admin/agences'),
   getVilles: () => api.get('/admin/villes'),

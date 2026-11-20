@@ -4,6 +4,7 @@ import com.godtravel.backend.exception.BusinessException;
 import com.godtravel.backend.exception.ResourceNotFoundException;
 import com.godtravel.backend.model.dto.billetterie.ReservationRequest;
 import com.godtravel.backend.model.dto.billetterie.TicketPublicView;
+import com.godtravel.backend.model.dto.promotion.PromotionApplication;
 import com.godtravel.backend.model.entity.*;
 import com.godtravel.backend.model.entity.view.VueVoyagesDisponibles;
 import com.godtravel.backend.repository.*;
@@ -43,6 +44,9 @@ public class BilletterieService {
     private final CategorieVoyageurRepository categorieVoyageurRepository;
     private final ClotureCaisseRepository clotureCaisseRepository;
     private final CompteClientRepository compteClientRepository;
+    private final VerrouSiegeService verrouSiegeService;
+    private final PromotionService promotionService;
+    private final FideliteService fideliteService;
     @Value("${app.ticket-hmac-secret:}")
     private String ticketHmacSecret;
 
@@ -104,25 +108,42 @@ public class BilletterieService {
         return value == null ? "" : value.replaceAll("[^0-9]", "");
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getPlanSieges(String idVoyage) {
         Voyage voyage = voyageRepository.findById(idVoyage)
                 .orElseThrow(() -> new ResourceNotFoundException("Voyage", "id", idVoyage));
 
         int totalPlaces = voyage.getBus() != null ? voyage.getBus().getNbPlaces() : 50;
-        List<Integer> occupes = billetRepository.findSiegesOccupesByVoyage(idVoyage, LocalDateTime.now().minusMinutes(10));
+        LocalDateTime now = LocalDateTime.now();
+        List<Integer> occupes = billetRepository.findSiegesVendusByVoyage(idVoyage);
+        List<Integer> enAttentePaiement = billetRepository.findSiegesEnAttentePaiementByVoyage(idVoyage, now.minusMinutes(10));
+        List<Integer> verrouilles = verrouSiegeService.getSiegesVerrouilles(idVoyage);
+        Set<Integer> indisponibles = new HashSet<>(occupes);
+        indisponibles.addAll(enAttentePaiement);
+        indisponibles.addAll(verrouilles);
 
         List<Integer> libres = new ArrayList<>();
         for (int i = 1; i <= totalPlaces; i++) {
-            if (!occupes.contains(i)) {
+            if (!indisponibles.contains(i)) {
                 libres.add(i);
             }
+        }
+
+        Map<String, String> statuts = new LinkedHashMap<>();
+        for (int i = 1; i <= totalPlaces; i++) {
+            String status = occupes.contains(i) ? "OCCUPE"
+                    : (enAttentePaiement.contains(i) || verrouilles.contains(i)) ? "VERROUILLE" : "LIBRE";
+            statuts.put(String.valueOf(i), status);
         }
 
         Map<String, Object> result = new HashMap<>();
         result.put("idVoyage", idVoyage);
         result.put("totalPlaces", totalPlaces);
         result.put("placesOccupees", occupes);
+        result.put("placesEnAttentePaiement", enAttentePaiement);
+        result.put("placesVerrouillees", verrouilles);
         result.put("placesLibres", libres);
+        result.put("statutsSieges", statuts);
         return result;
     }
 
@@ -160,6 +181,9 @@ public class BilletterieService {
         if (req.getNumSiege() < 1 || req.getNumSiege() > maxPlaces) {
             throw new BusinessException("Numéro de siège invalide. Ce bus a " + maxPlaces + " places.");
         }
+
+        // The lock owner is checked before creating either a counter sale or an online reservation.
+        verrouSiegeService.verifierVerrouPourReservation(req.getIdVoyage(), req.getNumSiege());
 
         // Vérification anti-surbooking
         boolean dejaOccupe = billetRepository.existsSiegeOccupe(req.getIdVoyage(), req.getNumSiege(), LocalDateTime.now().minusMinutes(10));
@@ -222,7 +246,17 @@ public class BilletterieService {
         if (prix == null || prix.signum() <= 0) {
             throw new BusinessException("Aucun tarif actif n'est défini pour ce voyage.");
         }
-        if (req.getMontantPaye() != null && req.getMontantPaye().compareTo(prix) != 0) {
+        Promotion promotion = null;
+        BigDecimal prixFinal = prix;
+        if (req.getCodePromo() != null && !req.getCodePromo().isBlank()) {
+            PromotionApplication application = promotionService.appliquerPromo(req.getCodePromo(), prix);
+            promotion = application.promotion();
+            prixFinal = application.prixFinalXaf();
+            if (prixFinal.signum() <= 0) {
+                throw new BusinessException("Cette remise couvre tout le billet. Contactez l’agence pour émettre un billet gratuit.");
+            }
+        }
+        if (req.getMontantPaye() != null && req.getMontantPaye().compareTo(prixFinal) != 0) {
             throw new BusinessException("Le montant envoyé ne correspond pas au tarif enregistré.");
         }
 
@@ -231,6 +265,7 @@ public class BilletterieService {
                 .client(client)
                 .voyage(voyage)
                 .categorieVoyageur(cat)
+                .promotion(promotion)
                 .employe(employe)
                 .codeBillet(codeBillet)
                 .codeReservation(codeReservation)
@@ -239,7 +274,7 @@ public class BilletterieService {
                 .canalVente(clientEnLigne ? "EN_LIGNE" : "GUICHET")
                 .dateEmission(LocalDateTime.now())
                 .dateValidite(LocalDate.now())
-                .prixAppliqueXaf(prix)
+                .prixAppliqueXaf(prixFinal)
                 .estGratuit(false)
                 .voyageParTiers(false)
                 .copiePieceVerifiee(true)
@@ -258,11 +293,12 @@ public class BilletterieService {
                     .clotureCaisse(sessionCaisse)
                     .billet(savedBillet)
                     .referenceTransaction("TXN-" + System.currentTimeMillis())
-                    .montantPayeXaf(prix)
+                    .montantPayeXaf(prixFinal)
                     .datePaiement(LocalDateTime.now())
                     .statutPaiement("VALIDE")
                     .build();
             paiementRepository.save(paiement);
+            fideliteService.incrementerCompteur(client.getIdClient());
         }
 
         return savedBillet;
@@ -276,7 +312,11 @@ public class BilletterieService {
         if ("EMBARQUE".equals(billet.getStatutBillet())) {
             throw new BusinessException("Impossible d'annuler un billet déjà embarqué.");
         }
+        if ("ANNULE".equals(billet.getStatutBillet())) {
+            throw new BusinessException("Ce billet est déjà annulé.");
+        }
 
+        promotionService.annulerUtilisation(billet.getPromotion());
         billet.setStatutBillet("ANNULE");
         return billetRepository.save(billet);
     }
