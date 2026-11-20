@@ -87,8 +87,6 @@ function SessionHydration() {
 
 export default function App() {
   const location = useLocation()
-  const role = normalizeRole(useAuthStore((s) => s.user?.role))
-  const isStaff = staff.includes(role)
   const [bootReady, setBootReady] = useState(false)
   useEffect(() => {
     let active = true
@@ -104,7 +102,7 @@ export default function App() {
     <ApiStatusNotice />
     <Suspense fallback={<PageLoading />}><Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<Navigate to="/connexion" replace />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/connexion" element={<ClientAuthPage />} />
       <Route path="/inscription" element={<ClientAuthPage initialMode="register" />} />
       <Route path="/billet" element={<TicketLookupPage />} />

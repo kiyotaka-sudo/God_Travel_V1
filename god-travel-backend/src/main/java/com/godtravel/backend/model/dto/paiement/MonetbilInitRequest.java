@@ -27,6 +27,6 @@ public class MonetbilInitRequest {
 
     private String nomClient;
     private String emailClient;
-    private String operateur; // ORANGE ou MTN (optionnel)
+    private String operateur; // ORANGE ou MTN; converti en code Monetbil Cameroun
 }
 

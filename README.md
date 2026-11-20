@@ -22,7 +22,7 @@ La base MariaDB active, les identifiants locaux, les `.bat`, les dépendances in
 2. Créez la base en important `god_travel_complet_master.sql` dans phpMyAdmin ou avec le client MySQL. **Le script recrée les tables du schéma `god_travel_41` : ne l’importez pas sur une base qui contient des données à conserver.**
 3. Copiez `god-travel-backend/src/main/resources/application.example.properties` vers `application.properties` au même endroit, puis configurez l’accès à la base.
 4. Configurez les secrets localement, sans les ajouter au dépôt : `APP_JWT_SECRET` et `APP_TICKET_HMAC_SECRET` doivent chacun contenir au moins 32 caractères. Au premier démarrage seulement, définissez aussi `APP_BOOTSTRAP_ADMIN_PASSWORD` pour créer le compte administrateur initial. Le master ne contient aucun mot de passe de démonstration.
-5. Pour les paiements en ligne, ajoutez `MONETBIL_SERVICE_KEY`, `MONETBIL_SERVICE_SECRET` et une URL HTTPS publique dans `MONETBIL_PUBLIC_BASE_URL` pour recevoir les notifications Monetbil.
+5. Pour les paiements en ligne, ajoutez localement `MONETBIL_SERVICE_KEY`, `MONETBIL_SERVICE_SECRET`, `MONETBIL_PUBLIC_BASE_URL` et `GOD_TRAVEL_FRONTEND_URL`. Le service Monetbil doit accepter les paiements Cameroun/XAF et avoir MTN Mobile Money et Orange Money activés. L’URL de notification configurée chez Monetbil est `{MONETBIL_PUBLIC_BASE_URL}/api/paiements/monetbil/notify`; elle doit être publique en HTTPS et pointer vers ce backend. `GOD_TRAVEL_FRONTEND_URL` doit pointer vers l’interface publique suivie de `/paiement/retour`. Ne partagez pas la clé ni le secret dans Git ou dans une conversation.
 
 Exemple de génération de secrets dans PowerShell :
 

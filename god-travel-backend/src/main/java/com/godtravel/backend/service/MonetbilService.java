@@ -115,7 +115,8 @@ public class MonetbilService {
         form.add("locale", "fr");
         form.add("country", "CM");
         form.add("currency", "XAF");
-        form.add("operator", request.getOperateur() == null ? "" : request.getOperateur());
+        String operatorCode = monetbilOperatorCode(request.getOperateur());
+        if (!operatorCode.isBlank()) form.add("operator", operatorCode);
         form.add("item_ref", request.getIdItem());
         form.add("payment_ref", reference);
         form.add("notify_url", notifyUrl);
@@ -232,6 +233,15 @@ public class MonetbilService {
     private boolean montantCorrespond(String value, BigDecimal expected) {
         try { return new BigDecimal(value).compareTo(expected) == 0; }
         catch (Exception exception) { return false; }
+    }
+
+    private String monetbilOperatorCode(String operator) {
+        if (operator == null || operator.isBlank()) return "";
+        return switch (operator.trim().toUpperCase(java.util.Locale.ROOT)) {
+            case "MTN", "CM_MTNMOBILEMONEY" -> "CM_MTNMOBILEMONEY";
+            case "ORANGE", "CM_ORANGEMONEY" -> "CM_ORANGEMONEY";
+            default -> throw new BusinessException("L’opérateur Mobile Money sélectionné n’est pas pris en charge.");
+        };
     }
 
     private void annulerBilletEnEchec(Paiement paiement) {
